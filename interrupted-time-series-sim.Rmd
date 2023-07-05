@@ -1,0 +1,97 @@
+---
+title: "Interrupted Time Series Simulation"
+author: "Zach Budesa"
+date: "2023-06-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+set.seed(12345)
+```
+
+```{r time}
+# Twelve years of months
+month <- rep(1:12, times = 12)
+# Twelve years
+year <- rep(2011:2022, each = 12, times = 1)
+# Combine
+time <- bind_cols(year = year,month = month)
+```
+
+
+# No Relationship Between Deaths and Naloxone
+
+```{r no relationship data}
+# Baseline Deaths & no naloxone
+ood <- rpois(12, 1.5*(2))
+nalox<-0
+
+data <- data.frame(ood,nalox)
+
+# No naloxone distribution
+for(i in 2:6){
+  
+  ood <- rpois(12, 1.5*(i))
+  nalox <- rep(0, times = 12)
+  
+  data <- bind_rows(data, data.frame(ood,nalox))
+  
+}
+
+# Naloxone Distribution Begins, but has no effect
+nalox <- rpois(12, 100*2^2)
+ood <- rpois(12, 1.5*(i))
+
+
+data1 <- data.frame(ood,nalox)
+
+
+for(i in 7:11){
+  
+  nalox <- rpois(12, 100*i^2)
+  
+  ood <- rpois(12, 1.5*(i))
+  
+  data1 <- bind_rows(data1, data.frame(ood,nalox))
+  
+}
+
+# Combine years
+df.nr <- bind_rows(data, data1)
+
+# Combine with time
+df.nr <- bind_cols(time,df.nr)
+
+# Identify Intervention begins
+df.nr <- df.nr %>% 
+  mutate(intervention = ifelse(nalox > 0, 1, 0))
+
+# Number rows by time
+df.nr$time <- 1:nrow(df.nr)
+
+# Number rows following interventon beginning
+df.nr$post.intervention.time <- c(rep(0,72),1:72)
+
+df.nr
+
+
+```
+
+## Generalized Least Squares Interrupted Time Series Analysis
+
+You can also embed plots, for example:
+
+```{r model 1}
+library(nlme)
+
+formula <- ood ~ time + intervention
+
+model.1 <- gls(formula, method = "ML", data = df.nr)
+
+summary(model.1)
+performance::performance(model.1)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
